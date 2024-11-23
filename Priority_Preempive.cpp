@@ -1,106 +1,102 @@
-// priority pre-emptive 
-#include <iostream>
-#include <vector>
-#include <algorithm>
+#include <stdio.h>
+#include <stdbool.h>
 
-using namespace std;
+typedef struct {
+    int pid;
+    int burst_time;
+    int arrival_time;
+    int remaining_time;
+    int priority;
+    int completion_time;
+    int waiting_time;
+    int turnaround_time;
+    bool completed;
+} Process;
 
-struct Process {
-    int pid;       // Process ID
-    int at;        // Arrival Time
-    int bt;        // Burst Time
-    int priority;  // Priority (higher value means higher priority)
-    int remaining_bt; // Remaining Burst Time
-    int ct;        // Completion Time
-    int tat;       // Turnaround Time
-    int wt;        // Waiting Time
-};
-
-void findAvgTime(vector<Process> &processes, int n) {
-    int currentTime = 0;
+void priority_preemptive(Process processes[], int n) {
+    int current_time = 0;
     int completed = 0;
-    int maxPriorityIndex;
-    bool found;
-    float totalWT = 0, totalTAT = 0;
 
-    while (completed != n) {
-        maxPriorityIndex = -1;
-        found = false;
+    while (completed < n) {
+        int idx = -1;
+        int max_priority = -1; // Initialize to a low value for maximum priority selection.
 
-        // Find the process with the highest priority (highest priority value)
         for (int i = 0; i < n; i++) {
-            if (processes[i].at <= currentTime && processes[i].remaining_bt > 0) {
-                if (maxPriorityIndex == -1 || processes[i].priority > processes[maxPriorityIndex].priority) {
-                    maxPriorityIndex = i;
-                    found = true;
-                }
+            if (processes[i].arrival_time <= current_time && 
+                !processes[i].completed && 
+                processes[i].priority > max_priority) { // Select higher priority.
+                max_priority = processes[i].priority;
+                idx = i;
             }
         }
 
-        // If no process is found, increment the current time
-        if (!found) {
-            currentTime++;
-            continue;
-        }
+        if (idx != -1) {
+            processes[idx].remaining_time--;
+            current_time++;
 
-        // Execute the selected process for one unit of time
-        processes[maxPriorityIndex].remaining_bt--;
-        currentTime++;
-
-        // If the process is completed
-        if (processes[maxPriorityIndex].remaining_bt == 0) {
-            completed++;
-            processes[maxPriorityIndex].ct = currentTime;
-            processes[maxPriorityIndex].tat = processes[maxPriorityIndex].ct - processes[maxPriorityIndex].at;
-            processes[maxPriorityIndex].wt = processes[maxPriorityIndex].tat - processes[maxPriorityIndex].bt;
-            totalWT += processes[maxPriorityIndex].wt;
-            totalTAT += processes[maxPriorityIndex].tat;
+            if (processes[idx].remaining_time == 0) {
+                processes[idx].completion_time = current_time;
+                processes[idx].turnaround_time = processes[idx].completion_time - processes[idx].arrival_time;
+                processes[idx].waiting_time = processes[idx].turnaround_time - processes[idx].burst_time;
+                processes[idx].completed = true;
+                completed++;
+            }
+        } else {
+            current_time++;
         }
     }
+}
 
-    // Print process details
-    cout << "\nP\tAT\tBT\tPriority\tCT\tTAT\tWT\n";
+void print_table(Process processes[], int n) {
+    printf("\nPID\tBurst Time\tArrival Time\tPriority\tCompletion Time\tTurnaround Time\tWaiting Time\n");
     for (int i = 0; i < n; i++) {
-        cout << "P" << processes[i].pid << "\t" << processes[i].at << "\t" << processes[i].bt << "\t"
-             << processes[i].priority << "\t\t" << processes[i].ct << "\t" << processes[i].tat << "\t"
-             << processes[i].wt << "\n";
+        printf("%d\t%d\t\t%d\t\t%d\t\t%d\t\t%d\t\t%d\n",
+            processes[i].pid,
+            processes[i].burst_time,
+            processes[i].arrival_time,
+            processes[i].priority,
+            processes[i].completion_time,
+            processes[i].turnaround_time,
+            processes[i].waiting_time);
     }
+}
 
-    cout << "\nAverage Waiting Time: " << (totalWT / n);
-    cout << "\nAverage Turnaround Time: " << (totalTAT / n) << endl;
+void calculate_avg_times(Process processes[], int n) {
+    float total_tat = 0, total_wt = 0;
+    for (int i = 0; i < n; i++) {
+        total_tat += processes[i].turnaround_time;
+        total_wt += processes[i].waiting_time;
+    }
+    printf("\nAverage Turnaround Time: %.2f\n", total_tat / n);
+    printf("Average Waiting Time: %.2f\n", total_wt / n);
 }
 
 int main() {
     int n;
-    cout << "Enter the number of processes: ";
-    cin >> n;
+    printf("Enter the number of processes: ");
+    scanf("%d", &n);
 
-    vector<Process> processes(n);
+    Process processes[n];
 
-    // Input process details
     for (int i = 0; i < n; i++) {
+        printf("Enter arrival time, burst time, and priority for process %d: ", i + 1);
+        scanf("%d %d %d", &processes[i].arrival_time, &processes[i].burst_time, &processes[i].priority);
         processes[i].pid = i + 1;
-        cout << "Enter Arrival Time, Burst Time, and Priority for Process " << processes[i].pid << ": ";
-        cin >> processes[i].at >> processes[i].bt >> processes[i].priority;
-        processes[i].remaining_bt = processes[i].bt;
+        processes[i].remaining_time = processes[i].burst_time;
+        processes[i].completed = false;
     }
 
-    // Find average time and display process details
-    findAvgTime(processes, n);
+    priority_preemptive(processes, n);
+    print_table(processes, n);
+    calculate_avg_times(processes, n);
 
     return 0;
 }
 
-/* Enter the number of processes: 3
-Enter Arrival Time, Burst Time, and Priority for Process 1: 1 3 1
-Enter Arrival Time, Burst Time, and Priority for Process 2: 2 3 2
-Enter Arrival Time, Burst Time, and Priority for Process 3: 3 1 0
-
-P	AT	BT	Priority	CT	TAT	WT
-P1	1	3	1		7	6	3
-P2	2	3	2		5	3	0
-P3	3	1	0		8	5	4
-
-Average Waiting Time: 2.33333
-Average Turnaround Time: 4.66667
+/*
+Enter the number of processes: 4
+Enter arrival time, burst time, and priority for process 1: 0 5 10
+Enter arrival time, burst time, and priority for process 2: 1 4 20
+Enter arrival time, burst time, and priority for process 3: 2 2 30
+Enter arrival time, burst time, and priority for process 4: 4 1 40
 */

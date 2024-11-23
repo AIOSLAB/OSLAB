@@ -1,121 +1,102 @@
-// priority non pre-emptive
+// Online C++ compiler to run C++ program online
 #include <bits/stdc++.h>
 using namespace std;
 
-struct Process {
-    int pid;      // Process ID
-    int bt;       // CPU Burst time required
-    int priority; // Priority of this process
-};
+typedef struct {
+    string Pid;
+    int at;         // Arrival time
+    int bt;         // Burst time
+    int ct = -1;    // Completion time
+    int tat = -1;   // Turnaround time
+    int wt = -1;    // Waiting time
+    int priority;   // Priority
+} Process;
 
-// Function to sort the Process according to priority
-bool comparison(Process a, Process b) {
-    return (a.priority > b.priority); // Higher priority value means higher priority
-}
-
-// Function to find the waiting time for all processes
-void findWaitingTime(Process proc[], int n, int wt[]) {
-    wt[0] = 0; // Waiting time for first process is 0
-
-    // Calculating waiting time for each process
-    for (int i = 1; i < n; i++) {
-        wt[i] = proc[i - 1].bt + wt[i - 1];
-    }
-}
-
-// Function to calculate turnaround time
-void findTurnAroundTime(Process proc[], int n, int wt[], int tat[]) {
-    // Calculating turnaround time by adding burst time and waiting time
-    for (int i = 0; i < n; i++) {
-        tat[i] = proc[i].bt + wt[i];
-    }
-}
-
-// Function to calculate average waiting time and turnaround time
-void findavgTime(Process proc[], int n) {
-    int wt[n], tat[n], total_wt = 0, total_tat = 0;
-
-    // Find waiting time for all processes
-    findWaitingTime(proc, n, wt);
-
-    // Find turnaround time for all processes
-    findTurnAroundTime(proc, n, wt, tat);
-
-    // Display processes along with all details
-    cout << "\nProcesses "
-         << " Burst time "
-         << " Waiting time "
-         << " Turnaround time\n";
-
-    // Calculate total waiting time and total turnaround time
-    for (int i = 0; i < n; i++) {
-        total_wt += wt[i];
-        total_tat += tat[i];
-        cout << " " << proc[i].pid << "\t\t" << proc[i].bt
-             << "\t " << wt[i] << "\t\t " << tat[i] << endl;
-    }
-
-    cout << "\nAverage waiting time = " << (float)total_wt / n;
-    cout << "\nAverage turnaround time = " << (float)total_tat / n << endl;
-}
-
-// Function to perform Priority Scheduling
-void priorityScheduling(Process proc[], int n) {
-    // Sort processes by priority
-    sort(proc, proc + n, comparison);
-
-    cout << "\nOrder in which processes get executed: ";
-    for (int i = 0; i < n; i++) {
-        cout << proc[i].pid << " ";
-    }
-    cout << endl;
-
-    findavgTime(proc, n);
-}
-
-// Main function
 int main() {
     int n;
-
-    // Take user input for the number of processes
     cout << "Enter the number of processes: ";
     cin >> n;
 
-    // Create an array of processes
-    Process proc[n];
+    vector<Process> pro(n);
 
-    // Take user input for each process's burst time and priority
     for (int i = 0; i < n; i++) {
-        cout << "\nEnter burst time and priority for process " << i + 1 << ":\n";
-        proc[i].pid = i + 1;
-        cout << "Burst time: ";
-        cin >> proc[i].bt;
-        cout << "Priority (higher number means higher priority): ";
-        cin >> proc[i].priority;
+        cout << "Enter Process ID, Arrival time, Burst time, and Priority respectively: ";
+        cin >> pro[i].Pid >> pro[i].at >> pro[i].bt >> pro[i].priority;
+        cout << endl;
     }
 
-    // Perform Priority Scheduling
-    priorityScheduling(proc, n);
+    // Sort processes by arrival time
+    sort(pro.begin(), pro.end(), [](const auto &a, const auto &b) {
+        return a.at < b.at;
+    });
+
+    int currentTime = pro[0].at;
+    currentTime += pro[0].bt;
+    pro[0].ct = currentTime;
+
+    // Mark the first process as completed by setting its priority to -1
+    pro[0].priority = -1;
+
+    int remainingProcesses = n - 1; // Number of processes left to complete
+
+    while (remainingProcesses > 0) {
+        int currentProcessIndex = -1;
+        int maxPriority = -1; // Initialize to a low value for maximum priority selection
+
+        // Find the process with the highest priority that has arrived and is not yet completed
+        for (int i = 0; i < n; i++) {
+            if (pro[i].at <= currentTime && pro[i].priority != -1 && pro[i].ct == -1) {
+                if (pro[i].priority > maxPriority) { // Higher priority number means higher priority
+                    currentProcessIndex = i;
+                    maxPriority = pro[i].priority;
+                }
+            }
+        }
+
+        if (currentProcessIndex != -1) {
+            currentTime += pro[currentProcessIndex].bt;
+            pro[currentProcessIndex].ct = currentTime;
+            pro[currentProcessIndex].priority = -1; // Mark as completed
+            remainingProcesses--;
+        } else {
+            currentTime++; // Increment time if no process is ready
+        }
+    }
+
+    // Calculate Turnaround Time (TAT) and Waiting Time (WT)
+    for (int i = 0; i < n; i++) {
+        pro[i].tat = pro[i].ct - pro[i].at;
+        pro[i].wt = pro[i].tat - pro[i].bt;
+    }
+
+    // Display process times
+    cout << "\nProcess ID\tArrival Time\tBurst Time\tPriority\tCompletion Time\tTurnaround Time\tWaiting Time\n";
+    for (int i = 0; i < n; i++) {
+        cout << pro[i].Pid << "\t\t" << pro[i].at << "\t\t" << pro[i].bt << "\t\t" << pro[i].priority
+             << "\t\t" << pro[i].ct << "\t\t" << pro[i].tat << "\t\t" << pro[i].wt << endl;
+    }
+
+    // Calculate averages for Waiting Time and Turnaround Time
+    double totalWT = 0, totalTAT = 0;
+
+    for (int i = 0; i < n; i++) {
+        totalWT += pro[i].wt;
+        totalTAT += pro[i].tat;
+    }
+
+    cout << "\nAverage Turnaround Time: " << totalTAT / n << endl;
+    cout << "Average Waiting Time: " << totalWT / n << endl;
 
     return 0;
 }
 
-/*Enter the number of processes: 2
+/*
+Enter the number of processes: 4
+Enter Process ID, Arrival time, Burst time, and Priority respectively: 1 0 5 10
 
-Enter burst time and priority for process 1:
-Burst time: 3
-Priority (higher number means higher priority): 2
+Enter Process ID, Arrival time, Burst time, and Priority respectively: 2 1 4 20
 
-Enter burst time and priority for process 2:
-Burst time: 1
-Priority (higher number means higher priority): 1
+Enter Process ID, Arrival time, Burst time, and Priority respectively: 3 2 2 30
 
-Order in which processes get executed: 1 2 
-
-Processes  Burst time  Waiting time  Turnaround time
- 1		3	 0		 3
- 2		1	 3		 4
-
-Average waiting time = 1.5
-Average turnaround time = 3.5
+Enter Process ID, Arrival time, Burst time, and Priority respectively: 4 4 1 40
 */

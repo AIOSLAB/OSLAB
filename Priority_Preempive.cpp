@@ -92,7 +92,7 @@ int main() {
 
     return 0;
 }
-
+// High number high priority
 /*
 Enter the number of processes: 4
 Enter arrival time, burst time, and priority for process 1: 0 5 10
